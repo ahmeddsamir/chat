@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Simple Chat</title>
+    <style>
+        body {
+            background-color: #f2f2f2;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            margin: 50px auto;
+            width: 600px;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #chat-messages {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        #chat-messages li {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            width: fit-content;
+        }
+
+        .message-from-me {
+            background-color: #7f897f;
+            color: white;
+            text-align: left;
+            padding-left: 10px;
+            margin-right: auto;
+        }
+
+        .message-from-other {
+            background-color: #390505;
+            color: white;
+            text-align: right;
+            padding-right: 10px;
+            margin-left: auto;
+        }
+
+        #chat-form {
+            display: flex;
+            margin-top: 20px;
+        }
+
+        #chat-input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 5px 0 0 5px;
+            background-color: #f9f9f9;
+        }
+
+        #send-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+
+        #send-button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Welcome, <%= me.name %>
+        </h1>
+        <h2>Chat With, <%= otherUser.name %>
+        </h2>
+        <ul id="chat-messages">
+            <% chat.messages.forEach((msg)=> { %>
+                <li class="<%= me.sub === msg.sender.toString() ? 'message-from-me' : 'message-from-other' %>">
+                    <%= msg.text %>
+                </li>
+                <% }); %>
+        </ul>
+        <form id="chat-form">
+            <input id="chat-input" autocomplete="off" />
+            <button id="send-button" type="button">Send</button>
+        </form>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const chatId = '<%= chat._id %>'; // Retrieve the chatId from the template variable
+            console.log(chatId, 12);
+            
+            const socket = io();
+
+            // Emit chatId when the page loads
+            socket.emit('join chat', chatId);
+
+            // Handle button click
+            const button = document.getElementById('send-button');
+            const input = document.getElementById('chat-input');
+            const messages = document.getElementById('chat-messages');
+
+            button.addEventListener('click', (e) => {
+                e.preventDefault(); // Prevent default button behavior
+
+                const message = input.value.trim();
+                if (message !== '') {
+                    // Send message to the server via API
+                    fetch(`/messages/${chatId}/send`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ text: message }),
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data) {
+                                // Handle successful response (optional)
+                                console.log('Message sent successfully');
+                            } else {
+                                // Handle error response (optional)
+                                console.log('Failed to send message');
+                            }
+                        })
+                        .catch(error => {
+                            console.log('Error:', error);
+                            // Handle network or other errors (optional)
+                        });
+
+                    input.value = ''; // Clear the input field after sending the message
+                }
+            });
+
+            // Listen for incoming chat messages
+            socket.on('message', (message) => {
+                console.log('message received', message)
+                const li = document.createElement('li');
+                li.textContent = message.text;
+                console.log('<%= me.sub %>', 1)
+                console.log(message.sender, 2)
+                if (message.sender == '<%= me.sub %>') {
+                    li.classList.add('message-from-me');
+                } else {
+                    li.classList.add('message-from-other');
+                }
+
+                messages.appendChild(li);
+            });
+
+        });
+    </script>
+</body>
+
+</html>
